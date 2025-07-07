@@ -1,24 +1,22 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Mail, Users, Settings, Plus } from "lucide-react";
+import { LogOut, Mail, Settings, Plus } from "lucide-react";
 import EmailComposer from "./EmailComposer";
 import EmailList from "./EmailList";
-import MemberManagement from "./MemberManagement";
 import { toast } from "sonner";
 
 interface DashboardProps {
   userRole: 'admin' | 'member';
-  onLogout: () => void;
+  // onLogout: () => void;
 }
 
-const Dashboard = ({ userRole, onLogout }: DashboardProps) => {
-  const [currentView, setCurrentView] = useState<'emails' | 'compose' | 'members'>('emails');
+const Dashboard = ({ userRole }: DashboardProps) => {
+  const [currentView, setCurrentView] = useState<'emails' | 'compose'>('emails');
 
-  const handleLogout = () => {
-    toast.success("Logged out successfully");
-    onLogout();
-  };
+  // const handleLogout = () => {
+  //   toast.success("Logged out successfully");
+  //   onLogout();
+  // };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -35,10 +33,10 @@ const Dashboard = ({ userRole, onLogout }: DashboardProps) => {
                 <p className="text-sm text-gray-500 capitalize">{userRole} Dashboard</p>
               </div>
             </div>
-            <Button onClick={handleLogout} variant="outline" size="sm">
+            {/* <Button onClick={handleLogout} variant="outline" size="sm">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
-            </Button>
+            </Button> */}
           </div>
         </div>
       </header>
@@ -63,16 +61,6 @@ const Dashboard = ({ userRole, onLogout }: DashboardProps) => {
               <Plus className="h-4 w-4 mr-2" />
               Compose
             </Button>
-            {userRole === 'admin' && (
-              <Button
-                variant={currentView === 'members' ? 'default' : 'ghost'}
-                onClick={() => setCurrentView('members')}
-                className="flex-1"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Members
-              </Button>
-            )}
           </div>
         </div>
 
@@ -80,7 +68,6 @@ const Dashboard = ({ userRole, onLogout }: DashboardProps) => {
         <div className="space-y-6">
           {currentView === 'emails' && <EmailList userRole={userRole} />}
           {currentView === 'compose' && <EmailComposer userRole={userRole} />}
-          {currentView === 'members' && userRole === 'admin' && <MemberManagement />}
         </div>
       </div>
     </div>

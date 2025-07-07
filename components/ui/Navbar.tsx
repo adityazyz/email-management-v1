@@ -24,6 +24,7 @@ function Navbar() {
 
   if (membership) {
     console.log(membership); 
+    console.log(membership.roleName); 
   }
   
   return (

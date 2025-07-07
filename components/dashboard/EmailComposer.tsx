@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, Save } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
+import axios from "axios";
 
-interface EmailComposerProps {
+interface EmailComposerProps { 
   userRole: 'admin' | 'member';
 }
 
@@ -19,35 +19,98 @@ const EmailComposer = ({ userRole }: EmailComposerProps) => {
     body: "",
     attachments: [] as File[]
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (action: 'send' | 'submit') => {
+  const handleSubmit = async (action: 'send' | 'submit') => {
     if (!emailData.to || !emailData.subject || !emailData.body) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    if (userRole === 'admin') {
-      toast.success("Email sent successfully!");
-    } else {
-      toast.success("Email submitted for admin review!");
-    }
+    setIsLoading(true);
 
-    // Reset form
-    setEmailData({
-      to: "",
-      subject: "",
-      body: "",
-      attachments: []
-    });
+    try {
+      if (userRole === 'admin' && action === 'send') {
+        // Admin sends email directly using nodemailer
+        const formData = new FormData();
+        formData.append('to', emailData.to);
+        formData.append('subject', emailData.subject);
+        formData.append('body', emailData.body);
+        
+        // Add attachments to FormData
+        emailData.attachments.forEach((file, index) => {
+          formData.append(`attachments`, file);
+        });
+
+        const response = await axios.post('/api/send-email', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        if (response.data.success) {
+          toast.success("Email sent successfully!");
+          // Reset form
+          setEmailData({
+            to: "",
+            subject: "",
+            body: "",
+            attachments: []
+          });
+        } else {
+          toast.error("Failed to send email: " + response.data.error);
+        }
+      } else {
+        // Member submits for review or admin saves draft
+        const response = await axios.post('/api/save-draft', {
+          to: emailData.to,
+          subject: emailData.subject,
+          body: emailData.body,
+          attachments: emailData.attachments.map(file => file.name), // Store file names for draft
+          status: action === 'submit' ? 'pending_review' : 'draft'
+        });
+
+        if (response.data.success) {
+          toast.success(action === 'submit' ? "Email submitted for admin review!" : "Draft saved successfully!");
+          // Reset form
+          setEmailData({
+            to: "",
+            subject: "",
+            body: "",
+            attachments: []
+          });
+        } else {
+          toast.error("Failed to save: " + response.data.error);
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setEmailData(prev => ({
-      ...prev,
-      attachments: [...prev.attachments, ...files]
-    }));
-    toast.success(`${files.length} file(s) attached`);
+    
+    // Check file size (limit to 10MB per file)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const validFiles = files.filter(file => {
+      if (file.size > maxSize) {
+        toast.error(`File ${file.name} is too large. Maximum size is 10MB.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      setEmailData(prev => ({
+        ...prev,
+        attachments: [...prev.attachments, ...validFiles]
+      }));
+      toast.success(`${validFiles.length} file(s) attached`);
+    }
   };
 
   const removeAttachment = (index: number) => {
@@ -75,6 +138,7 @@ const EmailComposer = ({ userRole }: EmailComposerProps) => {
               placeholder="recipient@example.com"
               value={emailData.to}
               onChange={(e) => setEmailData(prev => ({ ...prev, to: e.target.value }))}
+              disabled={isLoading}
             />
           </div>
 
@@ -85,6 +149,7 @@ const EmailComposer = ({ userRole }: EmailComposerProps) => {
               placeholder="Email subject"
               value={emailData.subject}
               onChange={(e) => setEmailData(prev => ({ ...prev, subject: e.target.value }))}
+              disabled={isLoading}
             />
           </div>
 
@@ -96,6 +161,7 @@ const EmailComposer = ({ userRole }: EmailComposerProps) => {
               className="min-h-[200px]"
               value={emailData.body}
               onChange={(e) => setEmailData(prev => ({ ...prev, body: e.target.value }))}
+              disabled={isLoading}
             />
           </div>
 
@@ -106,6 +172,7 @@ const EmailComposer = ({ userRole }: EmailComposerProps) => {
                 type="button"
                 variant="outline"
                 onClick={() => document.getElementById('file-upload')?.click()}
+                disabled={isLoading}
               >
                 <Paperclip className="h-4 w-4 mr-2" />
                 Attach Files
@@ -116,6 +183,7 @@ const EmailComposer = ({ userRole }: EmailComposerProps) => {
                 multiple
                 className="hidden"
                 onChange={handleFileUpload}
+                disabled={isLoading}
               />
             </div>
             
@@ -124,12 +192,13 @@ const EmailComposer = ({ userRole }: EmailComposerProps) => {
                 <p className="text-sm text-gray-600">Attached files:</p>
                 {emailData.attachments.map((file, index) => (
                   <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                    <span className="text-sm">{file.name}</span>
+                    <span className="text-sm">{file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => removeAttachment(index)}
+                      disabled={isLoading}
                     >
                       Remove
                     </Button>
@@ -144,13 +213,17 @@ const EmailComposer = ({ userRole }: EmailComposerProps) => {
           <Button
             variant="outline"
             onClick={() => handleSubmit('submit')}
+            disabled={isLoading}
           >
             <Save className="h-4 w-4 mr-2" />
             Save Draft
           </Button>
-          <Button onClick={() => handleSubmit('send')}>
+          <Button 
+            onClick={() => handleSubmit('send')} 
+            disabled={isLoading}
+          >
             <Send className="h-4 w-4 mr-2" />
-            {userRole === 'admin' ? 'Send Email' : 'Submit for Review'}
+            {isLoading ? 'Processing...' : (userRole === 'admin' ? 'Send Email' : 'Submit for Review')}
           </Button>
         </div>
       </CardContent>
