@@ -16,29 +16,53 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String?  @unique
-  posts     Post[]
-
-  // @@index([email], name: "user_email_index")
-  @@index([email], name: "user_email_index")
+  id             String   @id @default(cuid())
+  name           String?
+  email          String?  @unique
+  posts          Post[]
 }
 
-model Post{
+model Post {
   id        String   @id @default(cuid())
   title     String
-  // slug      String   @unique
-  slug      String   @unique 
+  slug      String   @unique
   content   String
   published Boolean  @default(false)
-
   author    User?    @relation(fields: [authorId], references: [id])
   authorId  String?
-  
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt 
+  updatedAt DateTime @updatedAt
 
-  // @@index(slug) 
   @@index([slug], name: "post_slug_index")
+}
+
+// Email status for workflow
+enum EmailStatus {
+  PENDING_REVIEW
+  SENT
+  REJECTED
+}
+
+model Email {
+  id           String       @id @default(cuid())
+  organisationId String 
+  subject      String
+  body         String
+  recipients   String[]
+  attachments  Attachment[]
+  status       EmailStatus  @default(PENDING_REVIEW)
+  createdBy   String
+  createdById  String
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Attachment {
+  id       String @id @default(cuid())
+  fileName String
+  fileType String
+  fileUrl  String
+  email    Email  @relation(fields: [emailId], references: [id])
+  emailId  String
 }

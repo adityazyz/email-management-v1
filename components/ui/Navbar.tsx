@@ -18,14 +18,14 @@ function Navbar() {
   const { isSignedIn, user, isLoaded } = useUser();
   const { membership } = useOrganization();
 
-  if (user) {
-    console.log(user); 
-  }
+  // if (user) {
+  //   console.log(user); 
+  // }
 
-  if (membership) {
-    console.log(membership); 
-    console.log(membership.roleName); 
-  }
+  // if (membership) {
+  //   console.log(membership); 
+  //   console.log(membership.roleName); 
+  // }
   
   return (
     <nav className="fixed top-0 border-solid border-gray-200 w-full border-b py-3 bg-white z-50 bg-inherit">
@@ -36,12 +36,11 @@ function Navbar() {
               <Link href="/" className="flex items-center">
                 <MdMarkEmailRead className="w-10 h-10  bg-clip-text text-[#AB47BC]" />
               </Link>
-              <p className="text-lg text-gray-800 font-bold ml-4">Email Automation</p>
+              <div className="flex flex-col ml-2">
+                <p className="text-xl text-gray-800 font-bold ">Email Automation</p>
+              <p className="text-sm">{membership?.roleName} Dashboard</p>
+              </div>
             </div>
-
-            <p className="text-gray-600 text-sm font-medium hidden lg:block">
-              Automate your email tasks with ease. {`Welcome ${isLoaded && isSignedIn ? user.firstName : "Guest"}!`}
-            </p>
 
             <header className="flex justify-end items-center p-4 gap-4 h-16">
               <SignedOut>

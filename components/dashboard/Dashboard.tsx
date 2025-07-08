@@ -7,10 +7,12 @@ import { toast } from "sonner";
 
 interface DashboardProps {
   userRole: 'admin' | 'member';
-  // onLogout: () => void;
+  userId: string;
+  userName : string;
+  organisationId: string;
 }
 
-const Dashboard = ({ userRole }: DashboardProps) => {
+const Dashboard = ({ userRole, userId,userName, organisationId }: DashboardProps) => {
   const [currentView, setCurrentView] = useState<'emails' | 'compose'>('emails');
 
   // const handleLogout = () => {
@@ -20,26 +22,7 @@ const Dashboard = ({ userRole }: DashboardProps) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <Mail className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Email Guardian</h1>
-                <p className="text-sm text-gray-500 capitalize">{userRole} Dashboard</p>
-              </div>
-            </div>
-            {/* <Button onClick={handleLogout} variant="outline" size="sm">
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button> */}
-          </div>
-        </div>
-      </header>
+
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation */}
@@ -66,8 +49,8 @@ const Dashboard = ({ userRole }: DashboardProps) => {
 
         {/* Content */}
         <div className="space-y-6">
-          {currentView === 'emails' && <EmailList userRole={userRole} />}
-          {currentView === 'compose' && <EmailComposer userRole={userRole} />}
+          {currentView === 'emails' && <EmailList userRole={userRole} userId={userId} organisationId={organisationId} />}
+          {currentView === 'compose' && <EmailComposer userName={userName} userRole={userRole} userId={userId} organisationId={organisationId} />}
         </div>
       </div>
     </div>

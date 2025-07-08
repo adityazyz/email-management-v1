@@ -14,6 +14,8 @@ export async function POST(request: NextRequest) {
     const body = formData.get('body') as string;
     const attachmentFiles = formData.getAll('attachments') as File[];
 
+    console.log("Attachment files received:", attachmentFiles);
+
     // Validate required fields
     if (!to || !subject || !body) {
       return NextResponse.json(

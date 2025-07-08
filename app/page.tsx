@@ -17,6 +17,8 @@ const Index = () => {
    const { isSignedIn, user, isLoaded } = useUser();
    const { membership } = useOrganization();
 
+
+
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-white to-indigo-200 flex items-center justify-center p-4">
@@ -103,8 +105,8 @@ const Index = () => {
   if(membership?.organization.slug === "tuskers"){
     return (
       <div className="pt-20">
-      <Dashboard userRole={membership?.roleName === "Admin" ? "admin" : "member"} />
-      
+      <Dashboard userName ={user?.fullName || "A Tusker" } userId={user?.id} organisationId={membership?.organization.id} userRole={membership?.roleName === "Admin" ? "admin" : "member"} />
+       
       {/* Toast Container */}
       <ToastContainer
         position="top-right"

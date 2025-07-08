@@ -6,13 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, Send, Save } from "lucide-react";
 import { toast } from "react-toastify";
+import { createEmail } from '@/actions/actions';
 import axios from "axios";
 
 interface EmailComposerProps { 
   userRole: 'admin' | 'member';
+  userId: string;
+  userName: string;
+  organisationId: string;
 }
 
-const EmailComposer = ({ userRole }: EmailComposerProps) => {
+const EmailComposer = ({ userRole, userId, userName, organisationId }: EmailComposerProps) => {
   const [emailData, setEmailData] = useState({
     to: "",
     subject: "",
@@ -31,57 +35,61 @@ const EmailComposer = ({ userRole }: EmailComposerProps) => {
 
     try {
       if (userRole === 'admin' && action === 'send') {
-        // Admin sends email directly using nodemailer
+        // create email entry for review
+        // Member: create email entry for review
+        const attachmentsMeta = emailData.attachments.map(file => ({
+          fileName: file.name,
+          fileType: file.type,
+          fileUrl: `/uploads/${file.name}` // Placeholder
+        }));
+        await createEmail({
+          subject: emailData.subject,
+          body: emailData.body,
+          recipients: emailData.to.split(',').map(s => s.trim()),
+          attachments: attachmentsMeta,
+          organisationId,
+          status: 'SENT',
+          createdById: userId,
+          createdBy: userName
+        });
+        toast.success("Email entry created!");
+        setEmailData({ to: "", subject: "", body: "", attachments: [] });
+
+        // Admin: send email directly via /api/send-email
         const formData = new FormData();
         formData.append('to', emailData.to);
         formData.append('subject', emailData.subject);
         formData.append('body', emailData.body);
-        
-        // Add attachments to FormData
-        emailData.attachments.forEach((file, index) => {
-          formData.append(`attachments`, file);
+        emailData.attachments.forEach((file) => {
+          formData.append('attachments', file);
         });
-
         const response = await axios.post('/api/send-email', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
-
         if (response.data.success) {
           toast.success("Email sent successfully!");
-          // Reset form
-          setEmailData({
-            to: "",
-            subject: "",
-            body: "",
-            attachments: []
-          });
+          setEmailData({ to: "", subject: "", body: "", attachments: [] });
         } else {
           toast.error("Failed to send email: " + response.data.error);
         }
       } else {
-        // Member submits for review or admin saves draft
-        const response = await axios.post('/api/save-draft', {
-          to: emailData.to,
+        // Member: create email entry for review
+        const attachmentsMeta = emailData.attachments.map(file => ({
+          fileName: file.name,
+          fileType: file.type,
+          fileUrl: `/uploads/${file.name}` // Placeholder
+        }));
+        await createEmail({
           subject: emailData.subject,
           body: emailData.body,
-          attachments: emailData.attachments.map(file => file.name), // Store file names for draft
-          status: action === 'submit' ? 'pending_review' : 'draft'
+          recipients: emailData.to.split(',').map(s => s.trim()),
+          attachments: attachmentsMeta,
+          organisationId,
+    createdBy: userName,
+          createdById: userId
         });
-
-        if (response.data.success) {
-          toast.success(action === 'submit' ? "Email submitted for admin review!" : "Draft saved successfully!");
-          // Reset form
-          setEmailData({
-            to: "",
-            subject: "",
-            body: "",
-            attachments: []
-          });
-        } else {
-          toast.error("Failed to save: " + response.data.error);
-        }
+        toast.success("Email submitted for admin review!");
+        setEmailData({ to: "", subject: "", body: "", attachments: [] });
       }
     } catch (error) {
       console.error('Error:', error);
