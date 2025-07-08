@@ -1,12 +1,12 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Clock, CheckCircle, XCircle, Eye } from "lucide-react";
+import { Mail, Clock, CheckCircle, XCircle, Eye, Download, Trash2 } from "lucide-react";
 import { getEmailsForUser, getEmailsForAdmin, deleteEmail, sendEmail, rejectEmail, updateEmail } from '@/actions/actions';
 import { toast } from "react-toastify";
 import axios from "axios";
+import React from "react";
 
 interface EmailListProps {
   userRole: 'admin' | 'member';
@@ -267,88 +267,149 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
             ))
           )}
         </div>
+
         {/* Modal for view/edit */}
         {selectedEmail && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg relative">
-              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-3xl font-bold p-2 focus:outline-none" onClick={handleModalClose}>&times;</button>
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-xl relative border border-gray-200">
+              <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-3xl font-bold p-2 focus:outline-none" onClick={handleModalClose}>&times;</button>
               {editMode ? (
                 <div>
-                  <h2 className="text-lg font-semibold mb-4">Edit Email</h2>
-                  <div className="space-y-2">
+                  <h2 className="text-2xl font-bold mb-6 text-gray-900 border-b pb-2">Edit Email</h2>
+                  <div className="space-y-4">
                     <input
-                      className="w-full border rounded p-2"
+                      className="w-full border rounded-lg p-3 text-base focus:ring-2 focus:ring-blue-200"
                       name="subject"
                       value={editData.subject}
                       onChange={handleEditChange}
                       placeholder="Subject"
                     />
                     <input
-                      className="w-full border rounded p-2"
+                      className="w-full border rounded-lg p-3 text-base focus:ring-2 focus:ring-blue-200"
                       name="recipients"
                       value={Array.isArray(editData.recipients) ? editData.recipients.join(', ') : editData.recipients}
                       onChange={e => setEditData({ ...editData, recipients: e.target.value.split(',').map((s: string) => s.trim()) })}
                       placeholder="Recipients (comma separated)"
                     />
                     <textarea
-                      className="w-full border rounded p-2 min-h-[100px]"
+                      className="w-full border rounded-lg p-3 min-h-[120px] text-base focus:ring-2 focus:ring-blue-200"
                       name="body"
                       value={editData.body}
                       onChange={handleEditChange}
                       placeholder="Body"
                     />
                     <div>
-                      <strong>Attachments:</strong>
-                      <ul className="list-disc ml-6">
+                      <strong className="block mb-2 text-gray-800">Attachments:</strong>
+                      <ul className="list-none bg-gray-50 rounded-lg p-3 space-y-2">
                         {editData.attachments && editData.attachments.length > 0 ? (
-                          editData.attachments.map((att: any, idx: number) => (
-                            <li key={idx}>{att.fileName}</li>
-                          ))
+                          editData.attachments.map((att: any, idx: number) => {
+                            const blob = att.fileData ? new Blob([att.fileData], { type: att.fileType }) : null;
+                            const url = blob ? URL.createObjectURL(blob) : null;
+                            return (
+                              <li key={idx} className="flex items-center gap-2 text-gray-700">
+                                <span className="truncate max-w-[160px]">{att.fileName}</span>
+                                {url && (
+                                  <>
+                                    <a href={url} target="_blank" rel="noopener noreferrer">
+                                      <Button variant="outline" size="sm" className="px-2 py-1 text-xs flex items-center gap-1"><Eye className="w-3 h-3" />View</Button>
+                                    </a>
+                                    <a href={url} download={att.fileName}>
+                                      <Button variant="outline" size="sm" className="px-2 py-1 text-xs flex items-center gap-1"><Download className="w-3 h-3" />Download</Button>
+                                    </a>
+                                  </>
+                                )}
+                                <Button variant="ghost" size="sm" className="px-2 py-1 text-xs text-red-600 flex items-center gap-1" onClick={() => {
+                                  setEditData((prev: any) => ({
+                                    ...prev,
+                                    attachments: prev.attachments.filter((_: any, i: number) => i !== idx)
+                                  }));
+                                }}><Trash2 className="w-3 h-3" />Remove</Button>
+                              </li>
+                            );
+                          })
                         ) : (
                           <li className="text-gray-400">No attachments</li>
                         )}
                       </ul>
+                      <div className="mt-3">
+                        <input
+                          type="file"
+                          multiple
+                          className="block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100"
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files || []);
+                            const newAttachments = await Promise.all(files.map(async (file) => {
+                              const arrayBuffer = await file.arrayBuffer();
+                              const fileData = new Uint8Array(arrayBuffer);
+                              return {
+                                fileName: file.name,
+                                fileType: file.type,
+                                fileData
+                              };
+                            }));
+                            setEditData((prev: any) => ({
+                              ...prev,
+                              attachments: [...prev.attachments, ...newAttachments]
+                            }));
+                            e.target.value = '';
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-end space-x-2 mt-4">
+                  <div className="flex justify-end space-x-2 mt-8 border-t pt-4">
                     <Button variant="outline" onClick={handleModalClose}>Cancel</Button>
-                    <Button onClick={handleEditSave}>Save</Button>
+                    <Button onClick={handleEditSave} className="bg-blue-600 text-white hover:bg-blue-700">Save</Button>
                   </div>
                 </div>
               ) : (
                 <div>
-                  <h2 className="text-lg font-semibold mb-4">Email Details</h2>
-                  <div className="mb-2"><strong>Subject:</strong> {selectedEmail.subject}</div>
-                  <div className="mb-2"><strong>To:</strong> {selectedEmail.recipients.join(', ')}</div>
-                  <div className="mb-2"><strong>Body:</strong> <pre className="whitespace-pre-wrap">{selectedEmail.body}</pre></div>
-                  <div className="mb-2"><strong>Status:</strong> {selectedEmail.status}</div>
-                  <div className="mb-2"><strong>Created By:</strong> {selectedEmail.createdBy}</div>
-                  <div className="mb-2"><strong>Created At:</strong> {new Date(selectedEmail.createdAt).toLocaleString()}</div>
+                  <h2 className="text-2xl font-bold mb-6 text-gray-900 border-b pb-2">Email Details</h2>
+                  <div className="mb-4">
+                    <div className="mb-2"><strong>Subject:</strong> <span className="text-gray-800">{selectedEmail.subject}</span></div>
+                    <div className="mb-2"><strong>To:</strong> <span className="text-gray-800">{selectedEmail.recipients.join(', ')}</span></div>
+                    <div className="mb-2"><strong>Body:</strong> <pre className="whitespace-pre-wrap text-gray-800 bg-gray-50 rounded p-2 mt-1">{selectedEmail.body}</pre></div>
+                    <div className="mb-2"><strong>Status:</strong> <span className="text-gray-800">{selectedEmail.status}</span></div>
+                    <div className="mb-2"><strong>Created By:</strong> <span className="text-gray-800">{selectedEmail.createdBy}</span></div>
+                    <div className="mb-2"><strong>Created At:</strong> <span className="text-gray-800">{new Date(selectedEmail.createdAt).toLocaleString()}</span></div>
+                  </div>
                   <div className="mb-2">
                     <strong>Attachments:</strong>
                     <ul className="list-disc ml-6">
                       {selectedEmail.attachments && selectedEmail.attachments.length > 0 ? (
-                        selectedEmail.attachments.map((att: any, idx: number) => (
-                          <li key={idx}>
-                            {att.fileData ? (
-                              <a href={URL.createObjectURL(new Blob([att.fileData], { type: att.fileType }))} download={att.fileName}>
-                              {att.fileName}
-                            </a>
-                            ) : (
-                              att.fileName
-                            )}
-                          </li>
-                        ))
+                        selectedEmail.attachments.map((att: any, idx: number) => {
+                          const blob = att.fileData ? new Blob([att.fileData], { type: att.fileType }) : null;
+                          const url = blob ? URL.createObjectURL(blob) : null;
+                          return (
+                            <li key={idx} className="flex items-center gap-2">
+                              <span>{att.fileName}</span>
+                              {url && (
+                                <>
+                                  <a href={url} target="_blank" rel="noopener noreferrer">
+                                    <Button variant="outline" size="sm" className="px-2 py-1 text-xs">View</Button>
+                                  </a>
+                                  <a href={url} download={att.fileName}>
+                                    <Button variant="outline" size="sm" className="px-2 py-1 text-xs">Download</Button>
+                                  </a>
+                                </>
+                              )}
+                            </li>
+                          );
+                        })
                       ) : (
                         <li className="text-gray-400">No attachments</li>
                       )}
                     </ul>
+                  </div>
+                  <div className="flex justify-end space-x-2 mt-4">
+                    <Button variant="outline" onClick={handleModalClose}>Close</Button>
                   </div>
                 </div>
               )}
             </div>
           </div>
         )}
+
         {/* Delete confirmation modal */}
         {deleteTarget && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
@@ -362,6 +423,7 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
             </div>
           </div>
         )}
+
         {/* Send confirmation modal */}
         {sendTarget && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
@@ -375,6 +437,7 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
             </div>
           </div>
         )}
+
         {/* Reject confirmation modal */}
         {rejectTarget && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
