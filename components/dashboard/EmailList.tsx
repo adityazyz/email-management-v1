@@ -21,6 +21,8 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [sendTarget, setSendTarget] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchEmails() {
@@ -179,6 +181,19 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
     }
   };
 
+  const confirmSend = async () => {
+    if (!sendTarget) return;
+    await handleSend(sendTarget);
+    setSendTarget(null);
+  };
+  const cancelSend = () => setSendTarget(null);
+  const confirmReject = async () => {
+    if (!rejectTarget) return;
+    await handleReject(rejectTarget);
+    setRejectTarget(null);
+  };
+  const cancelReject = () => setRejectTarget(null);
+
   return (
     <Card>
       <CardHeader>
@@ -199,9 +214,10 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
           ) : (
             emails.map((email) => (
               <div key={email.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  {/* Left: Subject and meta info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 mb-2 flex-wrap">
                       {getStatusIcon(email.status)}
                       <Badge className={getStatusColor(email.status)}>
                         {email.status.replace('_', ' ')}
@@ -212,16 +228,16 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
                         </Badge>
                       )}
                     </div>
-                    <h3 className="font-semibold text-gray-900 mb-1">
+                    <h3 className="font-semibold text-gray-900 mb-1 text-lg break-words">
                       {email.subject}
                     </h3>
                     <div className="text-sm text-gray-600 space-y-1">
-                      <p>To: {email.recipients.join(', ')}</p>
-                      <p>Ctreated by: {email.createdBy}</p>
-                      {/* <p>Created: {new Date(email.createdAt).toLocaleDateString()}</p> */}
+                      <div><span className="font-medium text-gray-800">To:</span> <span className="break-all">{email.recipients.join(', ')}</span></div>
+                      <div><span className="font-medium text-gray-800">Created by:</span> {email.createdBy}</div>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
+                  {/* Right: Action buttons */}
+                  <div className="flex flex-wrap gap-2 justify-start md:justify-end md:items-start md:w-auto w-full">
                     <Button variant="outline" size="sm" onClick={() => handleView(email)}>
                       View
                     </Button>
@@ -237,10 +253,10 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
                     )}
                     {userRole === 'admin' && email.status === 'PENDING_REVIEW' && (
                       <>
-                        <Button variant="outline" size="sm" className="text-blue-600 hover:text-blue-700" onClick={() => handleSend(email.id)}>
+                        <Button variant="outline" size="sm" className="text-blue-600 hover:text-blue-700" onClick={() => setSendTarget(email.id)}>
                           Send
                         </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleReject(email.id)}>
+                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => setRejectTarget(email.id)}>
                           Reject
                         </Button>
                       </>
@@ -255,7 +271,7 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
         {selectedEmail && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg relative">
-              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={handleModalClose}>&times;</button>
+              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-3xl font-bold p-2 focus:outline-none" onClick={handleModalClose}>&times;</button>
               {editMode ? (
                 <div>
                   <h2 className="text-lg font-semibold mb-4">Edit Email</h2>
@@ -342,6 +358,32 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
               <div className="flex justify-end space-x-2 mt-6">
                 <Button variant="outline" onClick={cancelDelete}>Cancel</Button>
                 <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Send confirmation modal */}
+        {sendTarget && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm relative">
+              <h2 className="text-lg font-semibold mb-4">Confirm Send</h2>
+              <p>Are you sure you want to send this email?</p>
+              <div className="flex justify-end space-x-2 mt-6">
+                <Button variant="outline" onClick={cancelSend}>Cancel</Button>
+                <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={confirmSend}>Send</Button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Reject confirmation modal */}
+        {rejectTarget && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm relative">
+              <h2 className="text-lg font-semibold mb-4">Confirm Reject</h2>
+              <p>Are you sure you want to reject this email?</p>
+              <div className="flex justify-end space-x-2 mt-6">
+                <Button variant="outline" onClick={cancelReject}>Cancel</Button>
+                <Button className="bg-red-600 text-white hover:bg-red-700" onClick={confirmReject}>Reject</Button>
               </div>
             </div>
           </div>

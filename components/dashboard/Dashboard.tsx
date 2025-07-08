@@ -31,7 +31,7 @@ const Dashboard = ({ userRole, userId,userName, organisationId }: DashboardProps
             <Button
               variant={currentView === 'emails' ? 'default' : 'ghost'}
               onClick={() => setCurrentView('emails')}
-              className="flex-1"
+              className={`flex-1 transition-all ${currentView === 'emails' ? 'border-b-4 border-blue-600 font-bold bg-blue-50 text-blue-800 shadow-sm' : ''}`}
             >
               <Mail className="h-4 w-4 mr-2" />
               Emails
@@ -39,7 +39,7 @@ const Dashboard = ({ userRole, userId,userName, organisationId }: DashboardProps
             <Button
               variant={currentView === 'compose' ? 'default' : 'ghost'}
               onClick={() => setCurrentView('compose')}
-              className="flex-1"
+              className={`flex-1 transition-all ${currentView === 'compose' ? 'border-b-4 border-green-600 font-bold bg-green-50 text-green-800 shadow-sm' : ''}`}
             >
               <Plus className="h-4 w-4 mr-2" />
               Compose
