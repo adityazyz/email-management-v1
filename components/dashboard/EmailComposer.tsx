@@ -34,14 +34,17 @@ const EmailComposer = ({ userRole, userId, userName, organisationId }: EmailComp
     setIsLoading(true);
 
     try {
-      if (userRole === 'admin' && action === 'send') {
-        // create email entry for review
-        // Member: create email entry for review
-        const attachmentsMeta = emailData.attachments.map(file => ({
+      // Read files as base64
+      const attachmentsMeta = await Promise.all(emailData.attachments.map(async (file) => {
+        const arrayBuffer = await file.arrayBuffer();
+        const fileData = new Uint8Array(arrayBuffer);
+        return {
           fileName: file.name,
           fileType: file.type,
-          fileUrl: `/uploads/${file.name}` // Placeholder
-        }));
+          fileData
+        };
+      }));
+      if (userRole === 'admin' && action === 'send') {
         await createEmail({
           subject: emailData.subject,
           body: emailData.body,
@@ -54,8 +57,7 @@ const EmailComposer = ({ userRole, userId, userName, organisationId }: EmailComp
         });
         toast.success("Email entry created!");
         setEmailData({ to: "", subject: "", body: "", attachments: [] });
-
-        // Admin: send email directly via /api/send-email
+        // Send email via /api/send-email (no change needed here)
         const formData = new FormData();
         formData.append('to', emailData.to);
         formData.append('subject', emailData.subject);
@@ -73,19 +75,13 @@ const EmailComposer = ({ userRole, userId, userName, organisationId }: EmailComp
           toast.error("Failed to send email: " + response.data.error);
         }
       } else {
-        // Member: create email entry for review
-        const attachmentsMeta = emailData.attachments.map(file => ({
-          fileName: file.name,
-          fileType: file.type,
-          fileUrl: `/uploads/${file.name}` // Placeholder
-        }));
         await createEmail({
           subject: emailData.subject,
           body: emailData.body,
           recipients: emailData.to.split(',').map(s => s.trim()),
           attachments: attachmentsMeta,
           organisationId,
-    createdBy: userName,
+          createdBy: userName,
           createdById: userId
         });
         toast.success("Email submitted for admin review!");
@@ -218,19 +214,20 @@ const EmailComposer = ({ userRole, userId, userName, organisationId }: EmailComp
         </div>
 
         <div className="flex justify-end space-x-2">
-          <Button
+          {/* <Button
             variant="outline"
             onClick={() => handleSubmit('submit')}
             disabled={isLoading}
           >
             <Save className="h-4 w-4 mr-2" />
             Save Draft
-          </Button>
+          </Button> */}
           <Button 
             onClick={() => handleSubmit('send')} 
             disabled={isLoading}
+            className="border rounded-xl border-gray-400"
           >
-            <Send className="h-4 w-4 mr-2" />
+            <Send className="h-4 w-4 mr-2 " />
             {isLoading ? 'Processing...' : (userRole === 'admin' ? 'Send Email' : 'Submit for Review')}
           </Button>
         </div>

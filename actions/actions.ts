@@ -79,12 +79,18 @@ export async function createEmail({
   subject: string,
   body: string,
   recipients: string[],
-  attachments: { fileName: string, fileType: string, fileUrl: string }[],
+  attachments: { fileName: string, fileType: string, fileData: Uint8Array }[],
   status?: EmailStatus,
   createdById: string,
   createdBy: string 
 }) {
   try {
+    // Convert fileData to Uint8Array if needed
+    const attachmentsForPrisma = attachments.map(att => ({
+      fileName: att.fileName,
+      fileType: att.fileType,
+      fileData: att.fileData instanceof Uint8Array ? att.fileData : new Uint8Array(att.fileData)
+    }));
     const email = await prisma.email.create({
       data: {
         organisationId,
@@ -95,7 +101,7 @@ export async function createEmail({
         createdById,
         createdBy : createdBy,
         attachments: {
-          create: attachments
+          create: attachmentsForPrisma
         }
       },
       include: { attachments: true }
@@ -124,7 +130,7 @@ export async function updateEmail({
   subject?: string,
   body?: string,
   recipients?: string[],
-  attachments?: { fileName: string, fileType: string, fileUrl: string }[],
+  attachments?: { fileName: string, fileType: string, fileData: Uint8Array }[],
   status?: EmailStatus,
   userId: string,
   userRole: 'admin' | 'member'
@@ -133,6 +139,11 @@ export async function updateEmail({
   if (!email) throw new Error('Email not found');
   if (userRole !== 'admin' && email.createdById !== userId) throw new Error('Forbidden');
   try {
+    const attachmentsForPrisma = attachments ? attachments.map(att => ({
+      fileName: att.fileName,
+      fileType: att.fileType,
+      fileData: att.fileData instanceof Uint8Array ? att.fileData : new Uint8Array(att.fileData)
+    })) : undefined;
     const updated = await prisma.email.update({
       where: { id },
       data: {
@@ -141,7 +152,7 @@ export async function updateEmail({
         body,
         recipients,
         status: userRole === 'admin' ? status : undefined,
-        attachments: attachments ? { deleteMany: {}, create: attachments } : undefined
+        attachments: attachmentsForPrisma ? { deleteMany: {}, create: attachmentsForPrisma } : undefined
       },
       include: { attachments: true }
     });

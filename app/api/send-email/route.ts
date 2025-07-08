@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
             </div>
             
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-              <p style="margin: 0;">Best regards,<br>Team Tuskers,<br>SGT University</p>
+              <p style="margin: 0;">Best regards,<br>Team Tuskers,<br> SGT University</p>
              
             </div>
           </div>

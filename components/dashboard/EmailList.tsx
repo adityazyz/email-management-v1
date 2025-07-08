@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Mail, Clock, CheckCircle, XCircle, Eye } from "lucide-react";
 import { getEmailsForUser, getEmailsForAdmin, deleteEmail, sendEmail, rejectEmail, updateEmail } from '@/actions/actions';
 import { toast } from "react-toastify";
+import axios from "axios";
 
 interface EmailListProps {
   userRole: 'admin' | 'member';
@@ -64,10 +65,35 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
 
   const handleSend = async (id: string) => {
     try {
-      await sendEmail({ id });
-      setEmails(emails.map(e => e.id === id ? { ...e, status: 'SENT' } : e));
-      toast.success('Email sent');
+      const email = emails.find(e => e.id === id);
+      if (!email) throw new Error('Email not found');
+      // Prepare FormData for /api/send-email
+      const formData = new FormData();
+      formData.append('to', email.recipients.join(','));
+      formData.append('subject', email.subject);
+      formData.append('body', email.body);
+      if (email.attachments && email.attachments.length > 0) {
+        for (const att of email.attachments) {
+          if (att.fileData) {
+            // Use fileData (Uint8Array) directly
+            const blob = new Blob([att.fileData], { type: att.fileType });
+            const file = new File([blob], att.fileName, { type: att.fileType });
+            formData.append('attachments', file);
+          }
+        }
+      }
+      const response = await axios.post('/api/send-email', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (response.data.success) {
+        await sendEmail({ id }); // update status in DB
+        setEmails(emails.map(e => e.id === id ? { ...e, status: 'SENT' } : e));
+        toast.success('Email sent');
+      } else {
+        toast.error('Failed to send email: ' + response.data.error);
+      }
     } catch (error) {
+      console.error(error);
       toast.error('Failed to send email');
     }
   };
@@ -191,8 +217,8 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
                     </h3>
                     <div className="text-sm text-gray-600 space-y-1">
                       <p>To: {email.recipients.join(', ')}</p>
-                      <p>From: {email.createdById}</p>
-                      <p>Created: {new Date(email.createdAt).toLocaleDateString()}</p>
+                      <p>Ctreated by: {email.createdBy}</p>
+                      {/* <p>Created: {new Date(email.createdAt).toLocaleDateString()}</p> */}
                     </div>
                   </div>
                   <div className="flex space-x-2">
@@ -241,6 +267,13 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
                       onChange={handleEditChange}
                       placeholder="Subject"
                     />
+                    <input
+                      className="w-full border rounded p-2"
+                      name="recipients"
+                      value={Array.isArray(editData.recipients) ? editData.recipients.join(', ') : editData.recipients}
+                      onChange={e => setEditData({ ...editData, recipients: e.target.value.split(',').map((s: string) => s.trim()) })}
+                      placeholder="Recipients (comma separated)"
+                    />
                     <textarea
                       className="w-full border rounded p-2 min-h-[100px]"
                       name="body"
@@ -248,6 +281,18 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
                       onChange={handleEditChange}
                       placeholder="Body"
                     />
+                    <div>
+                      <strong>Attachments:</strong>
+                      <ul className="list-disc ml-6">
+                        {editData.attachments && editData.attachments.length > 0 ? (
+                          editData.attachments.map((att: any, idx: number) => (
+                            <li key={idx}>{att.fileName}</li>
+                          ))
+                        ) : (
+                          <li className="text-gray-400">No attachments</li>
+                        )}
+                      </ul>
+                    </div>
                   </div>
                   <div className="flex justify-end space-x-2 mt-4">
                     <Button variant="outline" onClick={handleModalClose}>Cancel</Button>
@@ -261,10 +306,27 @@ const EmailList = ({ userRole, userId, organisationId }: EmailListProps) => {
                   <div className="mb-2"><strong>To:</strong> {selectedEmail.recipients.join(', ')}</div>
                   <div className="mb-2"><strong>Body:</strong> <pre className="whitespace-pre-wrap">{selectedEmail.body}</pre></div>
                   <div className="mb-2"><strong>Status:</strong> {selectedEmail.status}</div>
-                  <div className="mb-2"><strong>Created By:</strong> {selectedEmail.createdById}</div>
+                  <div className="mb-2"><strong>Created By:</strong> {selectedEmail.createdBy}</div>
                   <div className="mb-2"><strong>Created At:</strong> {new Date(selectedEmail.createdAt).toLocaleString()}</div>
-                  <div className="flex justify-end mt-4">
-                    <Button variant="outline" onClick={handleModalClose}>Close</Button>
+                  <div className="mb-2">
+                    <strong>Attachments:</strong>
+                    <ul className="list-disc ml-6">
+                      {selectedEmail.attachments && selectedEmail.attachments.length > 0 ? (
+                        selectedEmail.attachments.map((att: any, idx: number) => (
+                          <li key={idx}>
+                            {att.fileData ? (
+                              <a href={URL.createObjectURL(new Blob([att.fileData], { type: att.fileType }))} download={att.fileName}>
+                              {att.fileName}
+                            </a>
+                            ) : (
+                              att.fileName
+                            )}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="text-gray-400">No attachments</li>
+                      )}
+                    </ul>
                   </div>
                 </div>
               )}

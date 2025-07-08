@@ -59,10 +59,10 @@ model Email {
 }
 
 model Attachment {
-  id       String @id @default(cuid())
-  fileName String
-  fileType String
-  fileUrl  String
-  email    Email  @relation(fields: [emailId], references: [id])
-  emailId  String
+  id        String   @id @default(cuid())
+  fileName  String
+  fileType  String
+  fileData  Bytes
+  email     Email    @relation(fields: [emailId], references: [id])
+  emailId   String
 }
