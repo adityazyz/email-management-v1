@@ -7,12 +7,7 @@ Set clerk keys in .env file
 
 And u need to provide email id and app password in .env
 
-U need to provide these in .env :
-DATABASE_URL=
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-GMAIL_ID=
-GMAIL_APP_PASSWORD=
+U need to provide these in .env : DATABASE_URL, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY, GMAIL_ID, GMAIL_APP_PASSWORD
 
 
 ( Currently it has restricted access for a particular )
