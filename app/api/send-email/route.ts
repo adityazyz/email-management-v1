@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'tuskers@sgtuniversity.org',
+        user: process.env.GMAIL_ID, // Store your Gmail ID in environment variables
         pass: process.env.GMAIL_APP_PASSWORD // Store your app password in environment variables
       }
     });
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const mailOptions = {
       from: {
         name: 'Tuskers Society',
-        address: 'tuskers@sgtuniversity.org'
+        address: process.env.GMAIL_ID || "" // Use your Gmail ID as the sender
       },
       to: to,
       subject: subject,
